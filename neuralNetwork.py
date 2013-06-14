@@ -4,7 +4,7 @@
 #mail: gopala.koduri@gmail.com
 
 from __future__ import division
-from scipy.optimize import fmin_bfgs
+from scipy.optimize import fmin_bfgs, fmin_cg
 import numpy as np
 
 count = 0
@@ -76,7 +76,7 @@ def cost(nnParams, hiddenLayerSizes,\
     #compute activations using thetas and inputs
     allActivations = []
     allZs = []
-    #use numpy.np.insert to add column of np.ones!
+    #use numpy.np.insert to add column of np.ones
     #np.insert(np.matrix/arr, indexToInsertBefore, axis=0(row)/1(column))
     layerInput = np.insert(X, 0, np.ones(numSamples), axis=1)
     allActivations.append(X) #first layer activations are inputs
@@ -266,7 +266,45 @@ def train(X, y, hiddenLayerSizes,\
                                     _lambda)
     res = fmin_bfgs(funcHandle, initialTheta, fprime=funcDerivativeHandle,\
                     maxiter=10)
-    return res
+
+    #roll back theta values and return an allTheta!
+    allTheta = [] #np.array of theta matrices
+
+    layerSizes = []
+    layerSizes.extend(hiddenLayerSizes)
+    layerSizes.append(numLabels)
+    numHiddenLayers = len(hiddenLayerSizes)
+
+    prevLayerSize = inputLayerSize
+    startIndex = 0
+    for layerNum in xrange(numHiddenLayers+1):
+        curLayerSize = layerSizes[layerNum]
+        numValues = curLayerSize * (prevLayerSize+1)
+        endIndex = startIndex+numValues
+        theta = res[startIndex:endIndex]
+        theta = theta.reshape(prevLayerSize+1, curLayerSize)
+        theta = np.matrix(theta)
+        allTheta.append(theta)
+        startIndex=endIndex
+        prevLayerSize = curLayerSize
+
+    return allTheta
+
+def check(initialTheta, X, y, hiddenLayerSizes, numLabels, _lambda):
+#    inputLayerSize = X.shape[1]
+#    initialTheta = []
+#    prevLayerSize = inputLayerSize
+#    for size in hiddenLayerSizes:
+#        weights = randInitializeWeights(prevLayerSize, size)
+#        initialTheta.extend(weights)
+#        prevLayerSize = size
+#    weights = randInitializeWeights(prevLayerSize, numLabels)
+#    initialTheta.extend(weights)
+    
+    c = cost(initialTheta, hiddenLayerSizes, numLabels, X, y, _lambda)
+    d = derivatives(initialTheta, hiddenLayerSizes, numLabels, X, y, _lambda)
+
+    return [c,d]
 
 if __name__ == "__main__":
     X = np.loadtxt("smallX.txt", delimiter=",")
@@ -291,5 +329,5 @@ if __name__ == "__main__":
                                     _lambda)
     funcDerivativeHandle = lambda theta: derivatives(theta, hiddenLayerSizes, numLabels, X, y,\
                                     _lambda)
-    res = fmin_bfgs(funcHandle, initialTheta, fprime=funcDerivativeHandle,\
+    res = fmin_cg(funcHandle, initialTheta, fprime=funcDerivativeHandle,\
                     maxiter=50)

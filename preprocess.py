@@ -9,14 +9,15 @@ def featureNormalize(X):
     returns [X_norm, mu, sigma] where mu and sigma have means and standard
     deviations of each feature in X.
     """
-    X_norm = X
+    X_norm = np.zeros_like(X)
     numFeatures = X.shape[1]
     mu = np.zeros(numFeatures)
     sigma = np.zeros(numFeatures)
     for i in xrange(numFeatures):
         mu[i] = np.mean(X[:, i])
         sigma[i] = np.std(X[:, i])
-        X_norm[:, i] = (X[:, i]-mu[i])/sigma[i]
+        if sigma[i] != 0:
+            X_norm[:, i] = (X[:, i]-mu[i])/sigma[i]
 
     return [X_norm, mu, sigma]
 
@@ -42,7 +43,7 @@ def subSample(dataMatrix, maxSamples=0):
     if maxSamples == 0:
         #determine number of samples in the smallest class
         counts = [len(classIndices[c]) for c in xrange(numClasses)]
-    maxSamples = min(counts)
+        maxSamples = min(counts)
 
     rnd = random.Random()
     #chose not to pass the seed, as python's random chooses system's current
@@ -61,10 +62,10 @@ def splitData(dataMatrix, percentages=[60, 20, 20]):
     """
     dataMatrix is a matrix with each row being a sample, along with the class label
     (integer) as the last element in each row. 
-    percetanges: a list of percentages indicating [train, evaluate, test]
+    percetanges: a list of percentages indicating [train, validation, test]
     percetange splits.
     
-    Returns [train, evaluate, test] sets.
+    Returns [train, validation, test] sets.
 
     """
     if sum(percentages) != 100:
@@ -75,7 +76,7 @@ def splitData(dataMatrix, percentages=[60, 20, 20]):
     #time or operating system provided mechanism to seed automatically
 
     numSamples = dataMatrix.shape[0]
-    numClasses = max(dataMatrix[:, -1])+1
+    numClasses = int(max(dataMatrix[:, -1])+1)
 
     splitIndices = [[], [], []]
 
